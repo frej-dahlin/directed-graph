@@ -182,7 +182,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             assert(self.containsNode(node));
             return self.node_map.get(node).?.target_map.keys();
         }
-        
+
         // Iterators.
         pub const NodeSet = ArrayHashMapUnmanaged(N, void, HashContext, store_hash);
         /// Direction of traversal, either in the direction of the edges 'targetwards'
@@ -199,10 +199,10 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 direction: ?TraversalDirection = null,
                 start: N,
             };
-            
+
             pub const Queue = LinearFifo(N, .Dynamic);
-            
-            allocator: Allocator, 
+
+            allocator: Allocator,
             direction: TraversalDirection,
             graph: *Self,
             queue: Queue,
@@ -257,7 +257,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             pub fn reset(iter: *BFSIterator, options: ResetOptions) void {
                 if (options.direction) |dir| iter.direction = dir;
                 iter.queue.discard(iter.queue.count);
-                iter.queue.writeItemAssumeCapacity(options.start); 
+                iter.queue.writeItemAssumeCapacity(options.start);
                 iter.seen.clearRetainingCapacity();
             }
         };
@@ -265,7 +265,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
         pub fn bfsIterator(self: *Self, options: BFSIterator.InitOptions) Allocator.Error!BFSIterator {
             return BFSIterator.init(self, options);
         }
-        
+
         /// Iterates through the nodes of a graph in a greedy manner.
         pub const DFSIterator = struct {
             pub const InitOptions = struct {
@@ -277,9 +277,9 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 direction: ?TraversalDirection = null,
                 start: N,
             };
-            
+
             pub const Stack = ArrayListUnmanaged(N);
-            
+
             allocator: Allocator,
             direction: TraversalDirection,
             graph: *Self,
@@ -361,22 +361,22 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             };
             pub const ResetOptions = struct {
                 depth: ?usize = null,
-                direction: ?TraversalDirection = null, 
+                direction: ?TraversalDirection = null,
                 start: N,
             };
 
             const Stack = ArrayListUnmanaged(Entry);
-            
+
             allocator: Allocator,
             depth: usize,
             direction: TraversalDirection,
             graph: *Self,
             stack: Stack,
-            
+
             pub fn deinit(iter: *DLSIterator) void {
                 iter.stack.deinit(iter.allocator);
             }
-            
+
             pub fn init(graph: *Self, options: InitOptions) Allocator.Error!DLSIterator {
                 var iter = DLSIterator{
                     .allocator = options.allocator orelse graph.allocator,
@@ -385,10 +385,10 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     .depth = options.depth,
                     .direction = options.direction,
                 };
-                try iter.stack.append(iter.allocator, .{.node = options.start, .depth = 0});
+                try iter.stack.append(iter.allocator, .{ .node = options.start, .depth = 0 });
                 return iter;
             }
-            
+
             pub fn next(iter: *DLSIterator) !?Entry {
                 return while (iter.stack.popOrNull()) |entry| {
                     const neighbors = switch (iter.direction) {
@@ -397,21 +397,21 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     };
                     if (entry.depth == iter.depth) break entry;
                     for (neighbors) |neighbor| {
-                        try iter.stack.append(iter.allocator, .{.node = neighbor, .depth = entry.depth + 1});
+                        try iter.stack.append(iter.allocator, .{ .node = neighbor, .depth = entry.depth + 1 });
                     }
                     break entry;
                 } else null;
             }
-            
+
             pub fn peek(iter: *DLSIterator) ?Entry {
-                return iter.stack.getLastOrNull(); 
+                return iter.stack.getLastOrNull();
             }
-            
+
             pub fn reset(iter: *DLSIterator, options: ResetOptions) void {
                 if (options.depth) |depth| iter.depth = depth;
                 if (options.direction) |direction| iter.direction = direction;
                 iter.stack.clearRetainingCapacity();
-                iter.stack.appendAssumeCapacity(.{.node = options.start, .depth = 0});
+                iter.stack.appendAssumeCapacity(.{ .node = options.start, .depth = 0 });
             }
         };
         pub fn dlsIterator(self: *Self, options: DLSIterator.InitOptions) Allocator.Error!DLSIterator {
@@ -428,13 +428,13 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 start: N,
             };
             const ResetOptions = struct {
-                depth: usize = 0, 
+                depth: usize = 0,
                 direction: ?TraversalDirection = null,
                 start: ?N,
             };
-            
+
             const Stack = ArrayListUnmanaged(Entry);
-            
+
             dls: DLSIterator,
             // Needs to be stored for repeated resets of the DLS iterator.
             depth_reached: bool,
@@ -443,7 +443,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             pub fn deinit(iter: *IDSIterator) void {
                 iter.dls.deinit();
             }
-            
+
             pub fn init(graph: *Self, options: InitOptions) Allocator.Error!IDSIterator {
                 return IDSIterator{
                     .depth_reached = false,
@@ -456,7 +456,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     .start = options.start,
                 };
             }
-            
+
             pub fn next(iter: *IDSIterator) Allocator.Error!?Entry {
                 if (try iter.dls.next()) |entry| {
                     if (entry.depth == iter.dls.depth) iter.depth_reached = true;
@@ -464,11 +464,11 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 } else {
                     if (!iter.depth_reached) return null;
                     iter.depth_reached = false;
-                    iter.dls.reset(.{.start = iter.start, .depth = iter.dls.depth + 1});
+                    iter.dls.reset(.{ .start = iter.start, .depth = iter.dls.depth + 1 });
                     return try iter.next();
                 }
             }
-            
+
             pub fn reset(iter: *IDSIterator, options: ResetOptions) void {
                 iter.depth_reached = false;
                 if (options.start) |node| iter.start = node;
@@ -480,7 +480,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             }
         };
         pub fn idsIterator(self: *Self, options: IDSIterator.InitOptions) Allocator.Error!IDSIterator {
-       	    return IDSIterator.init(self, options); 
+            return IDSIterator.init(self, options);
         }
 
         /// The weight type used by the DijkstraIterator. Currently only arithmetic
@@ -526,13 +526,13 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     direction: ?TraversalDirection = null,
                     start: N,
                 };
-                
+
                 // Compare function used by the priority queue.
                 fn lessThan(_: void, a: DijkstraEntry, b: DijkstraEntry) std.math.Order {
                     return std.math.order(a.distance, b.distance);
                 }
                 const PriorityQueue = std.PriorityQueue(DijkstraEntry, void, lessThan);
-                
+
                 allocator: Allocator,
                 direction: TraversalDirection,
                 graph: *Self,
@@ -584,7 +584,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 pub fn peek(iter: *ThisIterator) ?DijkstraEntry {
                     return iter.queue.peek();
                 }
-                
+
                 /// Resets the iterator to a new starting point and optionally change the direction.
                 /// The backing data structures are cleared but their capacity is retained for efficiency.
                 pub fn reset(iter: *ThisIterator, options: ResetOptions) void {
@@ -632,7 +632,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     heuristic: HeuristicFn,
                     start: N,
                 };
-                
+
                 const QueueEntry = struct {
                     node: N,
                     // An estimate of the distance to the goal, obtained as tentative + heuristic(node).
@@ -649,7 +649,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                 };
                 const Tree = ArrayHashMapUnmanaged(N, TreeEntry, HashContext, store_hash);
 
-		allocator: Allocator,
+                allocator: Allocator,
                 context: HeuristicContext,
                 direction: TraversalDirection,
                 graph: *Self,
@@ -661,7 +661,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
 
                 /// Initializes the iterator to traverse in a given direction at a certain starting point.
                 pub fn init(graph: *Self, options: InitOptions) Allocator.Error!ThisIterator {
-                    var iter = ThisIterator {
+                    var iter = ThisIterator{
                         .allocator = options.allocator orelse graph.allocator,
                         .context = options.context,
                         .direction = options.direction,
@@ -674,8 +674,8 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
                     const start = options.start;
                     try iter.open.put(iter.allocator, start, {});
                     iter.queue = PriorityQueue.init(iter.allocator, {});
-                    try iter.queue.add(.{.node = start, .estimate = iter.heuristic(iter.context, start)});
-                    try iter.tree.put(iter.allocator, start, .{.previous = null, .tentative = 0});
+                    try iter.queue.add(.{ .node = start, .estimate = iter.heuristic(iter.context, start) });
+                    try iter.tree.put(iter.allocator, start, .{ .previous = null, .tentative = 0 });
                     return iter;
                 }
 
@@ -726,12 +726,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
         }
         /// Returns an A^* iterator over the nodes using a given heuristic function.
         /// NOTE: This is an experimental feature and is subject to change or removal.
-        pub fn aStarIterator(
-            self: *Self,
-            Distance: type,
-            HeuristicContext: type,
-            options: AStarIterator(Distance, HeuristicContext).InitOptions
-        ) Allocator.Error!AStarIterator(Distance, HeuristicContext) {
+        pub fn aStarIterator(self: *Self, Distance: type, HeuristicContext: type, options: AStarIterator(Distance, HeuristicContext).InitOptions) Allocator.Error!AStarIterator(Distance, HeuristicContext) {
             return AStarIterator(Distance, HeuristicContext).init(self, options);
         }
     };
@@ -788,49 +783,59 @@ test "iterators" {
 
     // BFS
     const root = 1;
-    var bfs = try tree.bfsIterator(.{.start = root});
+    var bfs = try tree.bfsIterator(.{ .start = root });
     defer bfs.deinit();
     while (try bfs.next()) |_| {}
     try expect(std.mem.eql(u64, bfs.seen.keys(), &[_]u64{ 1, 2, 3, 4, 5 }));
-    bfs.reset(.{.start = 3});
+    bfs.reset(.{ .start = 3 });
     try expect(bfs.seen.count() == 0);
     try expect(bfs.peek() == 3);
     while (try bfs.next()) |_| {}
     try expect(std.mem.eql(u64, bfs.seen.keys(), &[_]u64{ 3, 4, 5 }));
-    bfs.reset(.{.start = 5});
+    bfs.reset(.{ .start = 5 });
     bfs.direction = .sourcewards;
     while (try bfs.next()) |_| {}
     try expect(std.mem.eql(u64, bfs.seen.keys(), &[_]u64{ 5, 3, 1 }));
 
     // DFS
-    var dfs = try tree.dfsIterator(.{.start = root});
+    var dfs = try tree.dfsIterator(.{ .start = root });
     defer dfs.deinit();
     while (try dfs.next()) |_| {}
     try expect(std.mem.eql(u64, dfs.seen.keys(), &[_]u64{ 1, 3, 5, 4, 2 }));
-    dfs.reset(.{.start = 3});
+    dfs.reset(.{ .start = 3 });
     try expect(dfs.seen.count() == 0);
     try expect(dfs.peek() == 3);
     while (try dfs.next()) |_| {}
     try expect(std.mem.eql(u64, dfs.seen.keys(), &[_]u64{ 3, 5, 4 }));
-    dfs.reset(.{.start = 5, .direction = .sourcewards});
+    dfs.reset(.{ .start = 5, .direction = .sourcewards });
     while (try dfs.next()) |_| {}
     try expect(std.mem.eql(u64, dfs.seen.keys(), &[_]u64{ 5, 3, 1 }));
-    
+
     // IDS
-    var ids = try tree.idsIterator(.{.start = root});
+    var ids = try tree.idsIterator(.{ .start = root });
     defer ids.deinit();
     var ids_traversal = ArrayList(u64).init(ally);
     defer ids_traversal.deinit();
     while (try ids.next()) |entry| try ids_traversal.append(entry.node);
     try expect(std.mem.eql(u64, ids_traversal.items, &[_]u64{ // Depth 0..3
-    	1,
-    	1, 3, 2,
-    	1, 3, 5, 4, 2,
-   	    1, 3, 5, 4, 2,
+        1,
+        1,
+        3,
+        2,
+        1,
+        3,
+        5,
+        4,
+        2,
+        1,
+        3,
+        5,
+        4,
+        2,
     }));
 
     // Dijkstra
-    var dijkstra = try tree.dijkstraIterator(u64, .{.start = root});
+    var dijkstra = try tree.dijkstraIterator(u64, .{ .start = root });
     defer dijkstra.deinit();
     var distances = ArrayList(u64).init(ally);
     defer distances.deinit();
@@ -844,22 +849,22 @@ test "iterators" {
 // Note that a BFS or Dijkstra iterator would probably make more sense here.
 test "dynamic dls for the collatz graph" {
     const ally = std.testing.allocator;
-    
+
     var collatz = AutoDirectedGraph(u64, u64, void).init(ally);
     defer collatz.deinit();
     const root: u64 = 1;
     try collatz.putNode(root, 0);
-    
+
     // Expected outputs.
     const orbit_max = 7;
     const numbers_within_max = [_]u64{ 1, 2, 4, 8, 16, 32, 5, 64, 10, 128, 21, 20, 3 };
     const orbits_within_max = [_]u64{ 0, 1, 2, 3, 4, 5, 5, 6, 6, 7, 7, 7, 7 };
- 
-    // Generate the collatz graph bottom up to a maximum depth of 7. 
-    var iter = try collatz.dlsIterator(.{.depth = orbit_max - 1, .direction = .sourcewards, .start = root});
+
+    // Generate the collatz graph bottom up to a maximum depth of 7.
+    var iter = try collatz.dlsIterator(.{ .depth = orbit_max - 1, .direction = .sourcewards, .start = root });
     defer iter.deinit();
     while (iter.peek()) |entry| {
-    	const n = entry.node;
+        const n = entry.node;
         const orbit = entry.depth + 1;
         const a = 2 * n;
         // Todo: implement getOrPutNode.
