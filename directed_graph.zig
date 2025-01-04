@@ -373,6 +373,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
         /// up to and including a given depth. The returned entries of each iterations reports the found
         /// node and the depth it was reached at. There is no guarantee that the reported depth is the
         /// minimal one, see DijkstraIterator for this.
+        /// Note: Experimental and is subject to change or removal.
         pub const DLSIterator = struct {
             // The entry type returned by the iterator.
             pub const Entry = struct {
