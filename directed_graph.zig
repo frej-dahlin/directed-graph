@@ -882,8 +882,7 @@ test "iterators" {
 
 // For background, see: https://en.wikipedia.org/wiki/Collatz_conjecture
 // We use the reverse construction.
-// Note that a BFS or Dijkstra iterator would probably make more sense here.
-test "dynamic dls for the collatz graph" {
+test "dynamic bfs for the collatz graph" {
     const ally = std.testing.allocator;
 
     var collatz = AutoDirectedGraph(u64, u64, void).init(ally);
@@ -897,22 +896,23 @@ test "dynamic dls for the collatz graph" {
     const orbits_within_max = [_]u64{ 0, 1, 2, 3, 4, 5, 5, 6, 6, 7, 7, 7, 7 };
 
     // Generate the collatz graph bottom up to a maximum depth of 7.
-    var iter = try collatz.dlsIterator(.{ .depth = orbit_max - 1, .direction = .sourcewards, .start = root });
+    var iter = try collatz.bfsIterator(.{ .direction = .sourcewards, .start = root });
     defer iter.deinit();
-    while (iter.peek()) |entry| {
-        const n = entry.node;
-        const orbit = entry.depth + 1;
-        const a = 2 * n;
-        const a_result = try collatz.getOrPutNode(a);
-        if (!a_result.found_existing or orbit < a_result.value_ptr.*) a_result.value_ptr.* = orbit;
-        try collatz.putEdge(a, n, {});
+    while (iter.peek()) |n| : (_ = try iter.next()) {
+        const orbit = collatz.getNode(n).? + 1;
+        if (orbit > orbit_max) break;
+        {
+            const a = 2 * n;
+            const a_result = try collatz.getOrPutNode(a);
+            if (!a_result.found_existing) a_result.value_ptr.* = orbit;
+            try collatz.putEdge(a, n, {});
+        } 
         if (n % 6 == 4) {
             const b = (n - 1) / 3;
             const b_result = try collatz.getOrPutNode(b);
-            if (!b_result.found_existing or orbit < b_result.value_ptr.*) b_result.value_ptr.* = orbit;
+            if (!b_result.found_existing) b_result.value_ptr.* = orbit;
             try collatz.putEdge(b, n, {});
         }
-        _ = try iter.next();
     }
     try expect(collatz.order() == numbers_within_max.len);
     for (numbers_within_max) |n| try expect(collatz.containsNode(n));
