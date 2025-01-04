@@ -71,7 +71,7 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             const adjacent = self.node_map.get(a) orelse return null;
             return adjacent.targets.get(b);
         }
-
+        
         /// Returns the value of 'node' or null if not found.
         pub fn getNode(self: Self, node: N) ?V {
             const index = self.getNodeIndex(node) orelse return null;
@@ -83,6 +83,32 @@ pub fn DirectedGraph(N: type, V: type, W: type, HashContext: type, comptime stor
             return self.node_map.getIndex(node);
         }
 
+        pub const GetOrPutNodeResult = struct {
+            node_ptr: *N,
+            value_ptr: *V,
+            index: usize,
+            found_existing: bool,
+        };
+        
+        /// If the node exists then returns an entry with pointers, its index and sets found_existing to true.
+        /// Otherwise it puts a new item with undefined values.
+        pub fn getOrPutNode(self: *Self, node: N) Allocator.Error!GetOrPutNodeResult {
+            const result = try self.node_map.getOrPut(self.allocator, node);
+            if (!result.found_existing) {
+                result.value_ptr.* = .{
+                    .source_map = .{},
+                    .target_map = .{},
+                };
+                try self.node_values.append(self.allocator, undefined);
+            }
+            return .{
+                .node_ptr       = result.key_ptr,
+                .value_ptr      = &self.nodeValues()[result.index],
+                .index          = result.index,
+                .found_existing = result.found_existing,
+            };
+        }
+        
         /// Returns an empty directed graph.
         pub fn init(allocator: Allocator) Self {
             return Self{
@@ -745,6 +771,28 @@ test "putNode" {
     try expect(graph.nodes()[1] == 1);
 }
 
+test "getOrPutNode" {
+    const ally = std.testing.allocator;
+    var digraph = AutoDirectedGraph(u64, u64, void).init(ally);
+    defer digraph.deinit();
+    
+    for (0..10) |i| {
+        const result = try digraph.getOrPutNode(i);
+        try expect(!result.found_existing);
+        result.value_ptr.* = 0;
+    }
+    
+    for (0..10) |i| {
+        const result = try digraph.getOrPutNode(i);
+        try expect(result.found_existing);
+        result.value_ptr.* = i;
+    }
+    
+    for (digraph.nodeValues(), 0..) |value, i| {
+        try expect(value == i);
+    }
+}
+
 test "swapRemoveNode" {
     const ally = std.testing.allocator;
     var graph = AutoDirectedGraph(u64, void, void).init(ally);
@@ -817,21 +865,8 @@ test "iterators" {
     var ids_traversal = ArrayList(u64).init(ally);
     defer ids_traversal.deinit();
     while (try ids.next()) |entry| try ids_traversal.append(entry.node);
-    try expect(std.mem.eql(u64, ids_traversal.items, &[_]u64{ // Depth 0..3
-        1,
-        1,
-        3,
-        2,
-        1,
-        3,
-        5,
-        4,
-        2,
-        1,
-        3,
-        5,
-        4,
-        2,
+    try expect(std.mem.eql(u64, ids_traversal.items, &[_]u64{
+        1, 1, 3, 2, 1, 3, 5, 4, 2, 1, 3, 5, 4, 2,
     }));
 
     // Dijkstra
@@ -867,12 +902,13 @@ test "dynamic dls for the collatz graph" {
         const n = entry.node;
         const orbit = entry.depth + 1;
         const a = 2 * n;
-        // Todo: implement getOrPutNode.
-        if (!collatz.containsNode(a) or orbit < collatz.getNode(a).?) try collatz.putNode(a, orbit);
+        const a_result = try collatz.getOrPutNode(a);
+        if (!a_result.found_existing or orbit < a_result.value_ptr.*) a_result.value_ptr.* = orbit;
         try collatz.putEdge(a, n, {});
         if (n % 6 == 4) {
             const b = (n - 1) / 3;
-            if (!collatz.containsNode(b) or orbit < collatz.getNode(b).?) try collatz.putNode(b, orbit);
+            const b_result = try collatz.getOrPutNode(b);
+            if (!b_result.found_existing or orbit < b_result.value_ptr.*) b_result.value_ptr.* = orbit;
             try collatz.putEdge(b, n, {});
         }
         _ = try iter.next();
